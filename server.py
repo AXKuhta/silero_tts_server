@@ -65,19 +65,24 @@ while True:
 		# while HTTPReadLine(Client) != '':
 		#	pass
 
-		Client.send(b"HTTP/1.1 200 OK\r\n\r\n")
-		#Client.send(Text.encode())
+		try:
+			audio = model.apply_tts(text=Text, sample_rate=sample_rate, speaker=speaker)
 
-		audio = model.apply_tts(text=Text, sample_rate=sample_rate, speaker=speaker)
+			Client.send(b"HTTP/1.1 200 OK\r\n\r\n")
+			#Client.send(Text.encode())
 
-		ws = wrapsock(Client)
+			ws = wrapsock(Client)
 
-		wf = wave.open(ws, "wb")
-		wf.setnchannels(1)
-		wf.setsampwidth(2)
-		wf.setframerate(sample_rate)
-		wf.writeframes( tensor_to_int16array(audio*32767) )
-		wf.close()
+			wf = wave.open(ws, "wb")
+			wf.setnchannels(1)
+			wf.setsampwidth(2)
+			wf.setframerate(sample_rate)
+			wf.writeframes( tensor_to_int16array(audio*32767) )
+			wf.close()
+		except (ValueError, Exception):
+			print("Failed to synthesize that!")
+			Client.send(b"HTTP/1.1 500 Internal server error\r\n\r\n")
+
 
 		# Send FIN packet
 		# Let client close the connection
