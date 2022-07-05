@@ -34,7 +34,7 @@ model.to(device)
 
 MainSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 MainSocket.bind((Host, ListenPort))
-MainSocket.listen()
+MainSocket.listen(0)
 
 # A wrapper that makes it possible to write .wav into a socket
 # You can validate the total number of bytes written by adding a print here
