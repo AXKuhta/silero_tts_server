@@ -79,6 +79,9 @@ while True:
 			wf.setframerate(sample_rate)
 			wf.writeframes( tensor_to_int16array(audio*32767) )
 			wf.close()
+		except BrokenPipeError:
+			print("Abrupt disconnect")
+			break
 		except (ValueError, Exception):
 			print("Failed to synthesize that!")
 			Client.send(b"HTTP/1.1 500 Internal server error\r\n\r\n")
@@ -88,5 +91,3 @@ while True:
 		# Let client close the connection
 		Client.shutdown(2)
 		break
-
-
