@@ -27,7 +27,7 @@ def HTTPReadLine(sock):
 
 device = torch.device("cpu")
 torch.set_num_threads(2)
-file = "ru_v3.pt"
+file = "v3_1_ru.pt"
 
 model = torch.package.PackageImporter(file).load_pickle("tts_models", "model")
 model.to(device)
@@ -37,7 +37,7 @@ MainSocket.bind((Host, ListenPort))
 MainSocket.listen()
 
 # A wrapper that makes it possible to write .wav into a socket
-# Switch back to io.BytesIO(bstring) if this breaks
+# You can validate the total number of bytes written by adding a print here
 class wrapsock():
 	def __init__(self, sock):
 		self.sock = sock
@@ -74,15 +74,22 @@ while True:
 		Text = urllib.parse.unquote(URL)[1:]
 		print("Synthesize [" + Text + "]")
 
-		# No Keep-Alive without Content-Length
-		# while HTTPReadLine(Client) != '':
-		#	pass
+		# We support Keep-Alive so we have to read all the pending data
+		while HTTPReadLine(Client) != '':
+			pass
 
 		try:
 			audio = model.apply_tts(text=Text, sample_rate=sample_rate, speaker=speaker)
 
-			Client.send(b"HTTP/1.1 200 OK\r\n\r\n")
-			#Client.send(Text.encode())
+			# In order to do Keep-Alive, having Content-Length is mandatory
+			# WAV header will always be 44 bytes, as derived from the source code of the wave module
+			# And the audio is 16 bit, so we multiply by 2
+			size = 44 + len(audio) * 2
+			header = "Content-Length: " + str(size) + "\r\n"
+
+			Client.send(b"HTTP/1.1 200 OK\r\n")
+			Client.send(header.encode())
+			Client.send(b"\r\n")
 
 			ws = wrapsock(Client)
 
@@ -99,8 +106,3 @@ while True:
 			print("Failed to synthesize that!")
 			Client.send(b"HTTP/1.1 500 Internal server error\r\n\r\n")
 
-
-		# Send FIN packet
-		# Let client close the connection
-		Client.shutdown(2)
-		break
