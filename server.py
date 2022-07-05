@@ -12,11 +12,18 @@ def HTTPReadLine(sock):
 	str = b""
 
 	while True:
-		chunk = sock.recv(1)
+		try:
+			chunk = sock.recv(1)
+		except ConnectionResetError:
+			return None
+
 		if chunk == b'\n':
 			return str.decode().strip()
+		if not chunk:
+			return None
 
 		str = str + chunk
+
 
 device = torch.device("cpu")
 torch.set_num_threads(2)
@@ -57,7 +64,13 @@ while True:
 	print("New connection!")
 
 	while Client:
-		Method, URL, Version = HTTPReadLine(Client).split(" ")
+		Request = HTTPReadLine(Client)
+
+		if Request == None:
+			print("Disconnected")
+			break
+
+		Method, URL, Version = Request.split(" ")
 		Text = urllib.parse.unquote(URL)[1:]
 		print("Synthesize [" + Text + "]")
 
